@@ -29,52 +29,66 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final FlutterTts flutterTts = FlutterTts();
   final stt.SpeechToText speech = stt.SpeechToText();
-  String texto = "Ola, eu sou o JARVIS";
-  bool ouvindo = false;
 
-  Future<void> falar(String frase) async {
-    await flutterTts.setLanguage("pt-BR");
-    await flutterTts.setPitch(0.8);
-    await flutterTts.speak(frase);
+  bool isListening = false;
+  String recognizedText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _speak('Olá, eu sou o Jarvis. Como posso ajudar?');
   }
 
-  void ouvir() async {
-    bool disponivel = await speech.initialize();
-    if (disponivel) {
-      setState(() => ouvindo = true);
-      speech.listen(
-        onResult: (resultado) {
-          setState(() {
-            texto = resultado.recognizedWords;
-          });
-        },
+  Future<void> _speak(String text) async {
+    await flutterTts.setLanguage('pt-BR');
+    await flutterTts.speak(text);
+  }
+
+  void _listen() async {
+    if (!isListening) {
+      bool available = await speech.initialize(
+        onStatus: (status) => print('Status: $status'),
+        onError: (error) => print('Erro: $error'),
       );
+      if (available) {
+        setState(() => isListening = true);
+        speech.listen(
+          onResult: (result) {
+            setState(() {
+              recognizedText = result.recognizedWords;
+            });
+          },
+        );
+      }
+    } else {
+      setState(() => isListening = false);
+      speech.stop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("JARVIS")),
+      appBar: AppBar(title: const Text('JARVIS')),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text(
-            texto,
-            style: const TextStyle(fontSize: 24),
-            textAlign: TextAlign.center,
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              recognizedText.isEmpty
+                  ? 'Toque no microfone e fale'
+                  : recognizedText,
+              style: const TextStyle(fontSize: 20),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+            FloatingActionButton(
+              onPressed: _listen,
+              child: Icon(isListening ? Icons.mic : Icons.mic_none),
+            ),
+          ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ouvir();
-          falar("Ola Jarvis, estou ouvindo");
-        },
-        child: const Icon(Icons.mic),
       ),
     );
   }
 }
-```
-  
